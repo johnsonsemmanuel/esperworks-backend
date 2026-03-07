@@ -60,3 +60,7 @@ composer.lock
 /public/mix-manifest.json
 /public/css
 /public/js
+
+# Railway specific (keep config files, exclude logs)
+railway_up.log
+railway_*.log

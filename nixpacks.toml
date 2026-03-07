@@ -1,0 +1,55 @@
+[phases.setup]
+nixPkgs = ["php82", "php82Packages.composer", "nodejs_20", "mysql-client"]
+
+[phases.build]
+cmds = [
+  "composer install --no-dev --optimize-autoloader",
+  "npm install",
+  "npm run build",
+  "php artisan config:cache",
+  "php artisan route:cache",
+  "php artisan migrate --force",
+  "php artisan storage:link"
+]
+
+[start]
+cmd = "sh start.sh"
+
+[variables]
+PHP_VERSION = "8.2"
+NODE_VERSION = "20"
+
+[phases.install]
+aptPkgs = [
+  "libzip-dev",
+  "libpng-dev",
+  "libjpeg-dev",
+  "libfreetype6-dev",
+  "libonig-dev",
+  "libxml2-dev",
+  "libcurl4-openssl-dev",
+  "libssl-dev",
+  "libbz2-dev",
+  "libmcrypt-dev",
+  "libreadline-dev",
+  "libsodium-dev",
+  "libtidy-dev",
+  "libxslt-dev"
+]
+
+[phases.build]
+nixPkgs = [
+  "php82",
+  "php82Packages.mbstring",
+  "php82Packages.xml",
+  "php82Packages.bcmath", 
+  "php82Packages.mysql",
+  "php82Packages.curl",
+  "php82Packages.zip",
+  "php82Packages.gd",
+  "php82Packages.tokenizer",
+  "php82Packages.pdo",
+  "php82Packages.pdo_mysql",
+  "php82Packages.fileinfo",
+  "php82Packages.opcache"
+]
