@@ -1,0 +1,18 @@
+# Redirect everything to public folder
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Handle CORS Preflight
+    RewriteCond %{REQUEST_METHOD} OPTIONS
+    RewriteRule ^(.*)$ public/$1 [L]
+
+    # Pass Authorization header through
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    # Fallback for CGI/FastCGI
+    SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
+
+    # Redirect to public
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
