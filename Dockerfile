@@ -10,18 +10,32 @@ RUN apt-get update && apt-get install -y \
     unzip \
     libonig-dev \
     libzip-dev \
-    && docker-php-ext-install pdo_mysql mbstring zip bcmath \
+    libpng-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install pdo_mysql mbstring zip bcmath gd \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
-# Copy composer files and install dependencies first (better layer caching)
-COPY composer.json composer.lock* ./
-RUN composer install --no-interaction --prefer-dist --no-progress
-
-# Copy the rest of the application code
+# Copy ALL application code first (including artisan file)
 COPY . .
+
+# Install composer dependencies without running post-install scripts
+RUN composer install --no-interaction --prefer-dist --no-progress --no-scripts --optimize-autoloader
+
+# Run Laravel-specific commands after all files are present
+RUN php artisan package:discover --ansi
+RUN php artisan config:cache
+RUN php artisan route:cache
+RUN php artisan storage:link
+
+# Set proper permissions
+RUN chown -R www-data:www-data /var/www/html \
+    && chmod -R 755 /var/www/html/storage \
+    && chmod -R 755 /var/www/html/bootstrap/cache
 
 EXPOSE 8000
 
