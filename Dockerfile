@@ -28,9 +28,8 @@ RUN composer install --no-interaction --prefer-dist --no-progress --no-scripts -
 
 # Run Laravel-specific commands after all files are present
 RUN php artisan package:discover --ansi
-RUN php artisan config:cache
-RUN php artisan route:cache
-RUN php artisan storage:link
+# Skip config:cache and route:cache during build - will run at runtime in start.sh
+RUN php artisan storage:link || true
 
 # Set proper permissions
 RUN chown -R www-data:www-data /var/www/html \

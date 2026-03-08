@@ -7,6 +7,10 @@
 export APP_ENV=production
 export APP_DEBUG=false
 
+# Run Laravel optimizations at runtime (after all env vars are set)
+php artisan config:cache
+php artisan route:cache
+
 # Run migrations (in case they weren't run during build)
 php artisan migrate --force
 
