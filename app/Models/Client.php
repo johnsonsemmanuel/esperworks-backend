@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Client extends Model
 {
-    use HasFactory;
+    use HasFactory, \App\Traits\BelongsToBusiness;
 
     protected $fillable = [
         'business_id', 'user_id', 'name', 'email', 'phone', 'address',

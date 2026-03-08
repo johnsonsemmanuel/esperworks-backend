@@ -343,6 +343,21 @@ class InvoiceController extends Controller
             $message = 'Invoice marked as sent, but email delivery failed for both client and business. Please check email addresses and try again or share the invoice link manually.';
         }
 
+        // Build WhatsApp share link for invoice payment
+        $paymentUrl = config('app.frontend_url') . '/pay/' . $invoiceObj->signing_token;
+        $currency = $invoiceObj->currency ?? 'GHS';
+        $currencySymbol = match($currency) { 'GHS' => 'GH₵', 'USD' => '$', 'EUR' => '€', 'GBP' => '£', default => $currency . ' ' };
+        $whatsappMessage = urlencode(
+            "Hi {$invoiceObj->client->name},\n\n"
+            . "{$businessObj->name} has sent you an invoice.\n\n"
+            . "📄 Invoice: {$invoiceObj->invoice_number}\n"
+            . "💰 Amount: {$currencySymbol}" . number_format($invoiceObj->amountDue(), 2) . "\n"
+            . "📅 Due: " . ($invoiceObj->due_date ? $invoiceObj->due_date->format('M d, Y') : 'On receipt') . "\n\n"
+            . "View & Pay: {$paymentUrl}\n\n"
+            . "Powered by EsperWorks"
+        );
+        $whatsappUrl = "https://wa.me/?text={$whatsappMessage}";
+
         return response()->json([
             'message' => $message,
             'email_sent' => $clientEmailSent,
@@ -354,6 +369,8 @@ class InvoiceController extends Controller
             'invoice_number' => $invoiceObj->invoice_number,
             'status' => $newStatus,
             'sent_at' => $invoiceObj->sent_at,
+            'payment_url' => $paymentUrl,
+            'whatsapp_url' => $whatsappUrl,
         ]);
     }
 

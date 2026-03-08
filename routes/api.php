@@ -95,17 +95,21 @@ Route::middleware('throttle:10,1')->post('/resolve-account', [PaymentSetupContro
 // Paystack webhook (no token validation - uses signature verification)
 Route::post('/payments/webhook', [PaymentController::class, 'webhook']);
 
+// Public signing activity tracking (from client signing page, rate-limited)
+Route::middleware('throttle:30,1')->post('/contracts/{token}/signing-activity',
+    [\App\Http\Controllers\Api\SigningEventController::class, 'recordActivity']);
+
 // Public document viewing via signing token (with token validation middleware)
 Route::middleware(['throttle:20,1', 'validate.public.token:invoice'])->group(function () {
     Route::get('/invoices/view/{token}', [InvoiceController::class, 'viewByToken']);
     Route::get('/invoices/pdf/{token}', [InvoiceController::class, 'downloadPdfByToken']);
-    Route::post('/invoices/sign/{token}', [InvoiceController::class, 'signByToken']);
+    Route::post('/invoices/sign/{token}', [InvoiceController::class, 'signByToken'])->middleware('throttle:3,1');
 });
 
 Route::middleware(['throttle:20,1', 'validate.public.token:contract'])->group(function () {
     Route::get('/contracts/view/{token}', [ContractController::class, 'viewByToken']);
     Route::get('/contracts/pdf/{token}', [ContractController::class, 'downloadPdfByToken']);
-    Route::post('/contracts/sign/{token}', [ContractController::class, 'signByToken']);
+    Route::post('/contracts/sign/{token}', [ContractController::class, 'signByToken'])->middleware('throttle:3,1');
 });
 
 // Public invoice viewing by ID for payment pages (with token validation)
@@ -254,6 +258,7 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
             Route::post('/contracts/{contract}/sign', [ContractController::class, 'sign']);
             Route::post('/contracts/{contract}/send-to-client', [ContractController::class, 'sendToClient']);
             Route::get('/contracts/{contract}/pdf', [ContractController::class, 'downloadPdf']);
+            Route::get('/contracts/{contract}/signing-events', [\App\Http\Controllers\Api\SigningEventController::class, 'contractEvents']);
 
             // Clients
             Route::get('/clients', [ClientController::class, 'index']);

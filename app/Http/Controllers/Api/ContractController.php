@@ -377,7 +377,23 @@ class ContractController extends Controller
         $contractObj->update(['status' => 'sent', 'sent_at' => now()]);
         ActivityLog::log('contract.sent', "Contract {$contractObj->contract_number} sent", $contractObj);
 
-        return response()->json(['message' => 'Document sent to client']);
+        // Build WhatsApp share link for the signing URL
+        $signingUrl = config('app.frontend_url') . '/sign/contract/' . $contractObj->signing_token;
+        $whatsappMessage = urlencode(
+            "Hi {$contractObj->client->name},\n\n"
+            . "{$businessObj->name} has sent you a " . ($contractObj->type === 'proposal' ? 'proposal' : 'contract') . " to review and sign.\n\n"
+            . "📄 {$contractObj->title}\n"
+            . "💰 GH₵ " . number_format($contractObj->value, 2) . "\n\n"
+            . "Review & Sign: {$signingUrl}\n\n"
+            . "Powered by EsperWorks"
+        );
+        $whatsappUrl = "https://wa.me/?text={$whatsappMessage}";
+
+        return response()->json([
+            'message' => 'Document sent to client',
+            'signing_url' => $signingUrl,
+            'whatsapp_url' => $whatsappUrl,
+        ]);
     }
 
     public function sendReminder($business, $contract)

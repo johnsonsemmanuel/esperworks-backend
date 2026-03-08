@@ -14,7 +14,7 @@ return [
     |
     */
 
-    'default' => 'log', // Force log mailer to prevent SMTP connection errors
+    'default' => env('MAIL_MAILER', 'log'),
 
     /*
     |--------------------------------------------------------------------------
