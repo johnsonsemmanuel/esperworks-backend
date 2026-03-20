@@ -65,7 +65,12 @@ Route::get('/config/paystack', function () {
     return response()->json(['public_key' => config('services.paystack.public_key', '')]);
 });
 
-// Health check
+// Simple ping — always returns 200, used by Railway healthcheck
+Route::get('/ping', function () {
+    return response()->json(['status' => 'ok'], 200);
+});
+
+// Full health check with DB status
 Route::get('/health', function () {
     try {
         \Illuminate\Support\Facades\DB::connection()->getPdo();

@@ -12,12 +12,17 @@ echo "PORT: ${PORT:-8000}"
 
 # Validate APP_KEY is set — Laravel cannot boot without it
 if [ -z "$APP_KEY" ]; then
-  echo "ERROR: APP_KEY is not set. Generate one with: php artisan key:generate --show"
-  echo "Then add it to Railway Variables as APP_KEY=base64:..."
+  echo "ERROR: APP_KEY is not set. Add APP_KEY to Railway Variables."
   exit 1
 fi
 
-# Run Laravel optimizations at runtime (after all env vars are set)
+# Clear any stale cached config from the build step
+echo "--- Clearing stale caches..."
+php artisan config:clear 2>/dev/null || true
+php artisan route:clear 2>/dev/null || true
+php artisan cache:clear 2>/dev/null || true
+
+# Re-cache with live environment variables now available
 echo "--- Caching config..."
 php artisan config:cache || echo "WARNING: config:cache failed, continuing..."
 
@@ -29,8 +34,7 @@ echo "--- Running migrations..."
 if php artisan migrate --force; then
   echo "Migrations complete."
 else
-  echo "WARNING: Migrations failed. Check DB_HOST, DB_DATABASE, DB_USERNAME, DB_PASSWORD."
-  echo "The server will still start but database features will not work."
+  echo "WARNING: Migrations failed. DB_HOST=${DB_HOST:-not set}"
 fi
 
 # Start the queue worker in the background
