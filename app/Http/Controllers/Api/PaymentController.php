@@ -8,7 +8,7 @@ use App\Models\Invoice;
 use App\Models\Payment;
 use App\Services\IdempotencyService;
 use App\Services\ManualPaymentService;
-use App\Services\PaymentGateway;
+use App\Contracts\PaymentGateway;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -112,7 +112,7 @@ class PaymentController extends Controller
         $gateway = app(PaymentGateway::class);
         $result = $gateway->initializeTransaction([
             'email' => $invoice->client->email,
-            'amount' => $amount,
+            'amount' => $requestedAmount,
             'currency' => $invoice->currency,
             'reference' => $reference,
             'subaccount' => $business->paystack_subaccount_code,

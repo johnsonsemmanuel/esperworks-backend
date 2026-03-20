@@ -49,10 +49,10 @@ ENV CHROMIUM_PATH=/usr/bin/chromium
 RUN npm install -g puppeteer@latest --unsafe-perm=true
 
 # Install Google Fonts (Inter) for professional document rendering
+# Using GitHub mirror as Google Fonts download API no longer returns a direct zip
 RUN mkdir -p /usr/share/fonts/truetype/inter && \
-    curl -sL "https://fonts.google.com/download?family=Inter" -o /tmp/inter.zip && \
-    unzip -o /tmp/inter.zip -d /usr/share/fonts/truetype/inter/ && \
-    rm /tmp/inter.zip && \
+    curl -sL "https://github.com/google/fonts/raw/main/ofl/inter/Inter%5Bslnt%2Cwght%5D.ttf" \
+        -o /usr/share/fonts/truetype/inter/Inter.ttf && \
     fc-cache -f -v
 
 # Install Composer
