@@ -51,6 +51,9 @@ class Contract extends Model
         'pdf_path', 'sent_at', 'viewed_at', 'signing_token', 'token_expires_at',
         'client_response', 'client_response_at', 'client_response_ip', 'client_response_user_agent',
         'content_hash', 'signature_method',
+        // Quote-specific fields
+        'quote_subtotal', 'quote_vat_rate', 'quote_total', 'quote_valid_until',
+        'quote_status', 'quote_items',
     ];
 
     protected function casts(): array
@@ -74,6 +77,11 @@ class Contract extends Model
             'token_expires_at' => 'datetime',
             'client_response_at' => 'datetime',
             'client_response' => 'array',
+            'quote_valid_until' => 'date',
+            'quote_items' => 'array',
+            'quote_subtotal' => 'decimal:2',
+            'quote_vat_rate' => 'decimal:2',
+            'quote_total' => 'decimal:2',
         ];
     }
 
