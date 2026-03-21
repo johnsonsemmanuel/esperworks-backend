@@ -30,6 +30,15 @@ class Invoice extends Model
         'subtotal',
         'vat_rate',
         'vat_amount',
+        'nhil_rate',
+        'nhil_amount',
+        'getfund_rate',
+        'getfund_amount',
+        'covid_levy_rate',
+        'covid_levy_amount',
+        'discount_rate',
+        'discount_amount',
+        'use_ghana_tax',
         'total',
         'amount_paid',
         'notes',
@@ -58,6 +67,15 @@ class Invoice extends Model
             'subtotal' => 'decimal:2',
             'vat_rate' => 'decimal:2',
             'vat_amount' => 'decimal:2',
+            'nhil_rate' => 'decimal:2',
+            'nhil_amount' => 'decimal:2',
+            'getfund_rate' => 'decimal:2',
+            'getfund_amount' => 'decimal:2',
+            'covid_levy_rate' => 'decimal:2',
+            'covid_levy_amount' => 'decimal:2',
+            'discount_rate' => 'decimal:2',
+            'discount_amount' => 'decimal:2',
+            'use_ghana_tax' => 'boolean',
             'total' => 'decimal:2',
             'amount_paid' => 'decimal:2',
             'signature_required' => 'boolean',
@@ -104,11 +122,34 @@ class Invoice extends Model
     public function calculateTotals(): void
     {
         $subtotal = $this->items->sum('amount');
-        $vatAmount = $subtotal * ($this->vat_rate / 100);
+
+        // Apply discount first
+        $discountAmount = $subtotal * ($this->discount_rate / 100);
+        $taxableAmount  = $subtotal - $discountAmount;
+
+        if ($this->use_ghana_tax) {
+            // Ghana VAT is applied on the taxable amount
+            $vatAmount      = $taxableAmount * ($this->vat_rate / 100);
+            $nhilAmount     = $taxableAmount * ($this->nhil_rate / 100);
+            $getfundAmount  = $taxableAmount * ($this->getfund_rate / 100);
+            $covidAmount    = $taxableAmount * ($this->covid_levy_rate / 100);
+            $totalTax       = $vatAmount + $nhilAmount + $getfundAmount + $covidAmount;
+        } else {
+            $vatAmount     = $taxableAmount * ($this->vat_rate / 100);
+            $nhilAmount    = 0;
+            $getfundAmount = 0;
+            $covidAmount   = 0;
+            $totalTax      = $vatAmount;
+        }
+
         $this->update([
-            'subtotal' => $subtotal,
-            'vat_amount' => $vatAmount,
-            'total' => $subtotal + $vatAmount,
+            'subtotal'          => $subtotal,
+            'discount_amount'   => $discountAmount,
+            'vat_amount'        => $vatAmount,
+            'nhil_amount'       => $nhilAmount,
+            'getfund_amount'    => $getfundAmount,
+            'covid_levy_amount' => $covidAmount,
+            'total'             => $taxableAmount + $totalTax,
         ]);
     }
 

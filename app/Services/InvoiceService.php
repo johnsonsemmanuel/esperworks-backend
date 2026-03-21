@@ -31,6 +31,8 @@ class InvoiceService
             $businessSignedAt = now();
         }
 
+        $useGhanaTax = $data['use_ghana_tax'] ?? $business->use_ghana_tax ?? false;
+
         $invoice = Invoice::create([
             'business_id' => $business->id,
             'client_id' => $data['client_id'],
@@ -41,6 +43,11 @@ class InvoiceService
             'due_date' => $data['due_date'],
             'currency' => $data['currency'] ?? $business->currency ?? 'GHS',
             'vat_rate' => $data['vat_rate'] ?? $business->vat_rate ?? 0,
+            'use_ghana_tax' => $useGhanaTax,
+            'nhil_rate' => $data['nhil_rate'] ?? ($useGhanaTax ? ($business->default_nhil_rate ?? 2.5) : 0),
+            'getfund_rate' => $data['getfund_rate'] ?? ($useGhanaTax ? ($business->default_getfund_rate ?? 2.5) : 0),
+            'covid_levy_rate' => $data['covid_levy_rate'] ?? ($useGhanaTax ? ($business->default_covid_levy_rate ?? 1.0) : 0),
+            'discount_rate' => $data['discount_rate'] ?? 0,
             'notes' => $data['notes'] ?? self::defaultNotes($business, $data['due_date'] ?? null),
             'payment_method' => $data['payment_method'] ?? 'all',
             'signature_required' => $data['signature_required'] ?? true,
@@ -49,7 +56,7 @@ class InvoiceService
             'business_signature_image' => $businessSigImage,
             'business_signed_at' => $businessSignedAt,
             'signing_token' => Str::random(64),
-            'token_expires_at' => now()->addDays(30), // Token expires in 30 days
+            'token_expires_at' => now()->addDays(30),
         ]);
 
         foreach ($data['items'] as $index => $item) {
@@ -215,15 +222,21 @@ class InvoiceService
 
     public function updateDraft(Invoice $invoice, array $data): Invoice
     {
-        $invoice->update(array_filter([
-            'client_id' => $data['client_id'] ?? null,
-            'issue_date' => $data['issue_date'] ?? null,
-            'due_date' => $data['due_date'] ?? null,
-            'currency' => $data['currency'] ?? null,
-            'vat_rate' => $data['vat_rate'] ?? null,
-            'notes' => $data['notes'] ?? null,
+        $updates = array_filter([
+            'client_id'      => $data['client_id'] ?? null,
+            'issue_date'     => $data['issue_date'] ?? null,
+            'due_date'       => $data['due_date'] ?? null,
+            'currency'       => $data['currency'] ?? null,
+            'vat_rate'       => $data['vat_rate'] ?? null,
+            'use_ghana_tax'  => $data['use_ghana_tax'] ?? null,
+            'nhil_rate'      => $data['nhil_rate'] ?? null,
+            'getfund_rate'   => $data['getfund_rate'] ?? null,
+            'covid_levy_rate'=> $data['covid_levy_rate'] ?? null,
+            'discount_rate'  => $data['discount_rate'] ?? null,
+            'notes'          => $data['notes'] ?? null,
             'payment_method' => $data['payment_method'] ?? null,
-        ], static fn ($value) => $value !== null));
+        ], static fn ($value) => $value !== null);
+        $invoice->update($updates);
 
         // Auto-apply business signature if not already set
         if (empty($invoice->business_signature_name) && !empty($invoice->business->signature_name)) {

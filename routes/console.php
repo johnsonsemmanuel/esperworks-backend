@@ -9,3 +9,5 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('invoices:mark-overdue')->daily()->at('00:05');
+Schedule::command('invoices:generate-recurring')->daily()->at('06:00');
+Schedule::command('plans:send-expiry-reminders')->daily()->at('08:00');

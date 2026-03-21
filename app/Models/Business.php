@@ -49,14 +49,22 @@ class Business extends Model
         'bank_code',
         'settlement_type',
         'payment_verified',
+        'use_ghana_tax',
+        'default_nhil_rate',
+        'default_getfund_rate',
+        'default_covid_levy_rate',
     ];
 
     protected function casts(): array
     {
         return [
-            'is_registered' => 'boolean',
-            'branding' => 'array',
-            'trial_ends_at' => 'datetime',
+            'is_registered'            => 'boolean',
+            'branding'                 => 'array',
+            'trial_ends_at'            => 'datetime',
+            'use_ghana_tax'            => 'boolean',
+            'default_nhil_rate'        => 'decimal:2',
+            'default_getfund_rate'     => 'decimal:2',
+            'default_covid_levy_rate'  => 'decimal:2',
         ];
     }
 
@@ -144,6 +152,21 @@ class Business extends Model
     public function recurringInvoices(): HasMany
     {
         return $this->hasMany(RecurringInvoice::class);
+    }
+
+    public function products(): HasMany
+    {
+        return $this->hasMany(\App\Models\Product::class);
+    }
+
+    public function creditNotes(): HasMany
+    {
+        return $this->hasMany(\App\Models\CreditNote::class);
+    }
+
+    public function bills(): HasMany
+    {
+        return $this->hasMany(\App\Models\Bill::class);
     }
 
     public function invoiceTemplates(): HasMany
@@ -307,52 +330,70 @@ class Business extends Model
     {
         return [
             'free' => [
-                'invoices' => 5,
-                'contracts' => 2,
-                'proposals' => 2,
-                'clients' => 5,
-                'expenses' => 0,
-                'team_members' => 1,
-                'users' => 1,
-                'businesses' => 1,
-                'storage_gb' => 1,
-                'recurring_invoices' => 0,
-                'invoice_templates' => 1,
-                'branding' => 0,
-                'client_portal' => 0,
+                'invoices'             => 5,
+                'quotes'               => 3,
+                'contracts'            => 2,
+                'proposals'            => 2,
+                'clients'              => 5,
+                'expenses'             => 0,
+                'bills'                => 0,
+                'credit_notes'         => 0,
+                'products'             => 10,
+                'team_members'         => 1,
+                'users'                => 1,
+                'businesses'           => 1,
+                'storage_gb'           => 1,
+                'recurring_invoices'   => 0,
+                'invoice_templates'    => 1,
+                'branding'             => 0,
+                'client_portal'        => 0,
                 'accounting_dashboard' => 0,
+                'ghana_tax'            => -1,  // always available
+                'whatsapp_share'       => -1,  // always available
             ],
             'growth' => [
-                'invoices' => 100,
-                'contracts' => 20,
-                'proposals' => 20,
-                'clients' => 50,
-                'expenses' => -1,
-                'team_members' => 3,
-                'users' => 3,
-                'businesses' => 2,
-                'storage_gb' => 10,
-                'recurring_invoices' => 5,
-                'invoice_templates' => 5,
-                'branding' => -1,
-                'client_portal' => -1,
+                'invoices'             => 100,
+                'quotes'               => 50,
+                'contracts'            => 20,
+                'proposals'            => 20,
+                'clients'              => 50,
+                'expenses'             => -1,
+                'bills'                => -1,
+                'credit_notes'         => 10,
+                'products'             => -1,
+                'team_members'         => 3,
+                'users'                => 3,
+                'businesses'           => 2,
+                'storage_gb'           => 10,
+                'recurring_invoices'   => 5,
+                'invoice_templates'    => 5,
+                'branding'             => -1,
+                'client_portal'        => -1,
                 'accounting_dashboard' => -1,
+                'ghana_tax'            => -1,
+                'whatsapp_share'       => -1,
             ],
             'pro' => [
-                'invoices' => -1,
-                'contracts' => -1,
-                'proposals' => -1,
-                'clients' => -1,
-                'expenses' => -1,
-                'team_members' => -1,
-                'users' => -1,
-                'businesses' => -1,
-                'storage_gb' => -1,
-                'recurring_invoices' => -1,
-                'invoice_templates' => -1,
-                'branding' => -1,
-                'client_portal' => -1,
+                'invoices'             => -1,
+                'quotes'               => -1,
+                'contracts'            => -1,
+                'proposals'            => -1,
+                'clients'              => -1,
+                'expenses'             => -1,
+                'bills'                => -1,
+                'credit_notes'         => -1,
+                'products'             => -1,
+                'team_members'         => -1,
+                'users'                => -1,
+                'businesses'           => -1,
+                'storage_gb'           => -1,
+                'recurring_invoices'   => -1,
+                'invoice_templates'    => -1,
+                'branding'             => -1,
+                'client_portal'        => -1,
                 'accounting_dashboard' => -1,
+                'ghana_tax'            => -1,
+                'whatsapp_share'       => -1,
             ],
         ];
     }
@@ -387,10 +428,12 @@ class Business extends Model
                         'tagline' => 'Look serious from day one. No credit card. No excuses.',
                         'features' => [
                             '5 invoices / month',
+                            '3 quotes / month',
                             '2 contracts or proposals / month',
                             'Up to 5 clients',
-                            '1 business profile',
-                            '1 professional invoice template',
+                            'Product catalogue (10 items)',
+                            'Ghana GRA tax breakdown (VAT, NHIL, GETFund, COVID levy)',
+                            'WhatsApp invoice sharing',
                             'PDF invoices & receipts',
                             'Email invoice sending',
                             'Manual payment recording',
@@ -406,10 +449,14 @@ class Business extends Model
                         'tagline' => 'For freelancers and small businesses ready to look established and save time.',
                         'features' => [
                             'Everything in Free, plus:',
-                            '100 invoices / month',
+                            '100 invoices + 50 quotes / month',
                             '20 contracts & proposals / month',
+                            'Unlimited product catalogue',
+                            'Bills & accounts payable tracking',
+                            '10 credit notes / month',
                             'Up to 50 clients',
                             '2 business profiles',
+                            '5 recurring invoice schedules',
                             'Expense tracking + receipt uploads',
                             'Basic Profit & Loss dashboard',
                             'Client portal dashboard',
@@ -426,13 +473,15 @@ class Business extends Model
                         'tagline' => 'For businesses running at full speed. EsperWorks becomes your command center.',
                         'features' => [
                             'Everything in Growth, plus:',
-                            'Unlimited invoices & documents',
-                            'Unlimited clients & templates',
+                            'Unlimited invoices, quotes & documents',
+                            'Unlimited clients, products & templates',
+                            'Unlimited bills & credit notes',
+                            'Unlimited recurring invoice schedules',
                             '5 business profiles',
                             'AI assistant (Invoices/Proposals)',
                             'Advanced analytics & revenue trends',
                             'MoMo, Bank, Card integration',
-                            '5 team members',
+                            'Unlimited team members',
                             'Dedicated priority support',
                         ],
                         'limits' => $defaults['pro'],

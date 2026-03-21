@@ -273,6 +273,38 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
             Route::delete('/clients/{client}', [ClientController::class, 'destroy']);
             Route::post('/clients/{client}/invite', [ClientController::class, 'invite']);
 
+            // Bills / Accounts Payable
+            Route::get('/bills', [\App\Http\Controllers\Api\BillController::class, 'index']);
+            Route::post('/bills', [\App\Http\Controllers\Api\BillController::class, 'store']);
+            Route::get('/bills/{bill}', [\App\Http\Controllers\Api\BillController::class, 'show']);
+            Route::put('/bills/{bill}', [\App\Http\Controllers\Api\BillController::class, 'update']);
+            Route::post('/bills/{bill}/mark-paid', [\App\Http\Controllers\Api\BillController::class, 'markPaid']);
+            Route::delete('/bills/{bill}', [\App\Http\Controllers\Api\BillController::class, 'destroy']);
+
+            // Credit Notes
+            Route::get('/credit-notes', [\App\Http\Controllers\Api\CreditNoteController::class, 'index']);
+            Route::post('/credit-notes', [\App\Http\Controllers\Api\CreditNoteController::class, 'store']);
+            Route::get('/credit-notes/{creditNote}', [\App\Http\Controllers\Api\CreditNoteController::class, 'show']);
+            Route::post('/credit-notes/{creditNote}/void', [\App\Http\Controllers\Api\CreditNoteController::class, 'void']);
+
+            // Quotes / Estimates
+            Route::get('/quotes', [\App\Http\Controllers\Api\QuoteController::class, 'index']);
+            Route::post('/quotes', [\App\Http\Controllers\Api\QuoteController::class, 'store']);
+            Route::get('/quotes/{contract}', [\App\Http\Controllers\Api\QuoteController::class, 'show']);
+            Route::put('/quotes/{contract}', [\App\Http\Controllers\Api\QuoteController::class, 'update']);
+            Route::delete('/quotes/{contract}', [\App\Http\Controllers\Api\QuoteController::class, 'destroy']);
+            Route::post('/quotes/{contract}/send', [\App\Http\Controllers\Api\QuoteController::class, 'send']);
+            Route::post('/quotes/{contract}/respond', [\App\Http\Controllers\Api\QuoteController::class, 'respond']);
+            Route::post('/quotes/{contract}/convert-to-invoice', [\App\Http\Controllers\Api\QuoteController::class, 'convertToInvoice']);
+
+            // Product / Service Catalogue
+            Route::get('/products', [\App\Http\Controllers\Api\ProductController::class, 'index']);
+            Route::post('/products', [\App\Http\Controllers\Api\ProductController::class, 'store']);
+            Route::get('/products/{product}', [\App\Http\Controllers\Api\ProductController::class, 'show']);
+            Route::put('/products/{product}', [\App\Http\Controllers\Api\ProductController::class, 'update']);
+            Route::delete('/products/{product}', [\App\Http\Controllers\Api\ProductController::class, 'destroy']);
+            Route::post('/products/{product}/usage', [\App\Http\Controllers\Api\ProductController::class, 'recordUsage']);
+
             // Expenses
             Route::get('/expenses', [ExpenseController::class, 'index']);
             Route::post('/expenses', [ExpenseController::class, 'store'])->middleware('plan.limit:expenses');
