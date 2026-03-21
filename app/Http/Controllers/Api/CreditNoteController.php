@@ -12,7 +12,7 @@ class CreditNoteController extends Controller
 {
     public function index(Request $request, Business $business)
     {
-        $query = $business->creditNotes()->with('client:id,name', 'invoice:id,invoice_number');
+        $query = $business->creditNotes()->with('invoice:id,invoice_number');
 
         if ($request->filled('status') && $request->status !== 'all') {
             $query->where('status', $request->status);
@@ -20,28 +20,51 @@ class CreditNoteController extends Controller
         if ($request->filled('search')) {
             $query->where(function ($q) use ($request) {
                 $q->where('credit_note_number', 'like', "%{$request->search}%")
-                  ->orWhereHas('client', fn ($q2) => $q2->where('name', 'like', "%{$request->search}%"));
+                  ->orWhere('reason', 'like', "%{$request->search}%");
             });
         }
 
-        return response()->json($query->latest()->paginate($request->per_page ?? 15));
+        $paginated = $query->latest()->paginate($request->per_page ?? 15);
+
+        $counts = [
+            'all'     => $business->creditNotes()->count(),
+            'issued'  => $business->creditNotes()->where('status', 'issued')->count(),
+            'applied' => $business->creditNotes()->where('status', 'applied')->count(),
+            'void'    => $business->creditNotes()->where('status', 'void')->count(),
+        ];
+
+        $summary = [
+            'total_issued'  => $business->creditNotes()->where('status', 'issued')->sum('total'),
+            'total_applied' => $business->creditNotes()->where('status', 'applied')->sum('total'),
+            'total_void'    => $business->creditNotes()->where('status', 'void')->sum('total'),
+        ];
+
+        return response()->json(array_merge($paginated->toArray(), [
+            'counts'  => $counts,
+            'summary' => $summary,
+        ]));
     }
 
     public function store(Request $request, Business $business)
     {
         $request->validate([
-            'client_id'  => 'required|exists:clients,id',
+            'client_id'  => 'nullable|exists:clients,id',
             'invoice_id' => 'nullable|exists:invoices,id',
             'issue_date' => 'required|date',
-            'reason'     => 'nullable|string|max:255',
+            'reason'     => 'required|string|max:255',
+            'currency'   => 'nullable|string|max:10',
             'notes'      => 'nullable|string',
-            'items'      => 'required|array|min:1',
-            'items.*.description' => 'required|string',
-            'items.*.quantity'    => 'required|numeric|min:0.01',
-            'items.*.rate'        => 'required|numeric|min:0',
+            // Line-item form
+            'items'               => 'sometimes|array|min:1',
+            'items.*.description' => 'required_with:items|string',
+            'items.*.quantity'    => 'required_with:items|numeric|min:0.01',
+            'items.*.rate'        => 'required_with:items|numeric|min:0',
+            // Simple-amount form (used by dashboard quick-create)
+            'subtotal'   => 'required_without:items|numeric|min:0.01',
+            'vat_amount' => 'nullable|numeric|min:0',
         ]);
 
-        if (!$business->clients()->where('id', $request->client_id)->exists()) {
+        if ($request->client_id && !$business->clients()->where('id', $request->client_id)->exists()) {
             return response()->json(['message' => 'Client not found'], 422);
         }
 
@@ -51,9 +74,15 @@ class CreditNoteController extends Controller
             if (!$invoice) return response()->json(['message' => 'Invoice not found'], 422);
         }
 
-        $items    = $request->items;
-        $subtotal = collect($items)->sum(fn ($i) => $i['quantity'] * $i['rate']);
-        $items    = collect($items)->map(fn ($i) => array_merge($i, ['amount' => $i['quantity'] * $i['rate']]))->toArray();
+        // Support both line-item and direct-amount creation
+        if ($request->has('items')) {
+            $items    = $request->items;
+            $subtotal = collect($items)->sum(fn ($i) => $i['quantity'] * $i['rate']);
+            $items    = collect($items)->map(fn ($i) => array_merge($i, ['amount' => $i['quantity'] * $i['rate']]))->toArray();
+        } else {
+            $subtotal = (float) $request->subtotal;
+            $items    = [['description' => $request->reason, 'quantity' => 1, 'rate' => $subtotal, 'amount' => $subtotal]];
+        }
 
         $prefix = 'CN-' . date('Y') . '-';
         $last   = CreditNote::where('business_id', $business->id)->count() + 1;
@@ -65,10 +94,10 @@ class CreditNoteController extends Controller
             'credit_note_number' => $number,
             'status'             => 'issued',
             'issue_date'         => $request->issue_date,
-            'currency'           => $business->currency ?? 'GHS',
+            'currency'           => $request->currency ?? $business->currency ?? 'GHS',
             'subtotal'           => $subtotal,
-            'vat_amount'         => 0,
-            'total'              => $subtotal,
+            'vat_amount'         => (float) ($request->vat_amount ?? 0),
+            'total'              => $subtotal + (float) ($request->vat_amount ?? 0),
             'reason'             => $request->reason,
             'notes'              => $request->notes,
             'items'              => $items,

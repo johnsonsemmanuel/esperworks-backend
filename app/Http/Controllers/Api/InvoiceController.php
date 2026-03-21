@@ -59,14 +59,21 @@ class InvoiceController extends Controller
 
         $invoices = $query->latest()->paginate($request->per_page ?? 15);
 
+        // Single aggregated query instead of 8 separate counts
+        $statusCounts = $business->invoices()
+            ->selectRaw('status, COUNT(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status')
+            ->toArray();
+
         $counts = [
-            'all' => $business->invoices()->count(),
-            'draft' => $business->invoices()->where('status', 'draft')->count(),
-            'sent' => $business->invoices()->where('status', 'sent')->count(),
-            'viewed' => $business->invoices()->where('status', 'viewed')->count(),
-            'paid' => $business->invoices()->where('status', 'paid')->count(),
-            'partial' => $business->invoices()->whereIn('status', ['partial', 'partially_paid'])->count(),
-            'overdue' => $business->invoices()->where('status', 'overdue')->count(),
+            'all'     => array_sum($statusCounts),
+            'draft'   => $statusCounts['draft'] ?? 0,
+            'sent'    => $statusCounts['sent'] ?? 0,
+            'viewed'  => $statusCounts['viewed'] ?? 0,
+            'paid'    => $statusCounts['paid'] ?? 0,
+            'partial' => ($statusCounts['partial'] ?? 0) + ($statusCounts['partially_paid'] ?? 0),
+            'overdue' => $statusCounts['overdue'] ?? 0,
             'deleted' => $business->invoices()->onlyTrashed()->count(),
         ];
 

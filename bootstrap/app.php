@@ -18,11 +18,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin.rate_limit' => \App\Http\Middleware\AdminRateLimitMiddleware::class,
             'business.owner' => \App\Http\Middleware\BusinessOwnerMiddleware::class,
             'plan.limit' => \App\Http\Middleware\PlanLimitMiddleware::class,
-            'assistant.guided' => \App\Http\Middleware\GuidedCreationMiddleware::class,
             'security.headers' => \App\Http\Middleware\SecurityHeaders::class,
             'maintenance' => \App\Http\Middleware\MaintenanceMiddleware::class,
             'check.status' => \App\Http\Middleware\CheckUserStatus::class,
-            'request.debounce' => \App\Http\Middleware\RequestDebouncingMiddleware::class,
             'validate.public.token' => \App\Http\Middleware\ValidatePublicToken::class,
             'rate.limit' => \App\Http\Middleware\ComprehensiveRateLimiting::class,
         ]);

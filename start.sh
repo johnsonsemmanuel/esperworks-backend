@@ -32,8 +32,14 @@ sleep 5
   echo "--- Running migrations..."
   if php artisan migrate --force; then
     echo "=== Migrations complete ==="
-    echo "--- Seeding database (idempotent - safe to run on every deploy)..."
-    php artisan db:seed --force && echo "=== Seeding complete ===" || echo "WARNING: Seeding failed (non-fatal)"
+    # Only seed when explicitly opt-in — prevents demo accounts being recreated
+    # on every production deploy. Set APP_SEED_ON_DEPLOY=true for first-time setup only.
+    if [ "${APP_SEED_ON_DEPLOY}" = "true" ]; then
+      echo "--- Seeding database (APP_SEED_ON_DEPLOY=true)..."
+      php artisan db:seed --force && echo "=== Seeding complete ===" || echo "WARNING: Seeding failed (non-fatal)"
+    else
+      echo "--- Skipping seeder (set APP_SEED_ON_DEPLOY=true to seed)"
+    fi
   else
     echo "=== WARNING: Migrations failed. DB_HOST=${DB_HOST:-not set} ==="
   fi

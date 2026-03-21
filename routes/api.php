@@ -150,13 +150,15 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('/auth/notification-preferences', [AuthController::class, 'getNotificationPreferences']);
     Route::put('/auth/notification-preferences', [AuthController::class, 'updateNotificationPreferences']);
     Route::post('/auth/test-notification', [AuthController::class, 'testNotification']);
-    Route::post('/auth/two-factor/toggle', [AuthController::class, 'toggleTwoFactor']);
-    Route::post('/auth/two-factor/verify', [AuthController::class, 'verifyTwoFactor']);
-    Route::post('/auth/two-factor/verify-backup', [AuthController::class, 'verifyTwoFactorBackup']);
-    Route::post('/auth/two-factor/generate-backup', [AuthController::class, 'generateBackupCodes']);
+    Route::middleware('throttle:10,1')->group(function () {
+        Route::post('/auth/two-factor/toggle', [AuthController::class, 'toggleTwoFactor']);
+        Route::post('/auth/two-factor/verify', [AuthController::class, 'verifyTwoFactor']);
+        Route::post('/auth/two-factor/verify-backup', [AuthController::class, 'verifyTwoFactorBackup']);
+        Route::post('/auth/two-factor/generate-backup', [AuthController::class, 'generateBackupCodes']);
+        Route::delete('/auth/sessions/{tokenId}', [AuthController::class, 'revokeSession']);
+        Route::delete('/auth/sessions', [AuthController::class, 'revokeAllSessions']);
+    });
     Route::get('/auth/sessions', [AuthController::class, 'activeSessions']);
-    Route::delete('/auth/sessions/{tokenId}', [AuthController::class, 'revokeSession']);
-    Route::delete('/auth/sessions', [AuthController::class, 'revokeAllSessions']);
     Route::middleware('throttle:5,1')->post('/auth/verify-email', [AuthController::class, 'verifyEmail']);
     Route::middleware('throttle:3,1')->post('/auth/resend-verification', [AuthController::class, 'resendVerification']);
 
@@ -340,7 +342,7 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
 
             // Team Management
             Route::get('/team', [TeamController::class, 'index']);
-            Route::post('/team/invite', [TeamController::class, 'invite'])->middleware('plan.limit:users');
+            Route::post('/team/invite', [TeamController::class, 'invite'])->middleware('plan.limit:users', 'throttle:5,1');
             Route::put('/team/{member}/role', [TeamController::class, 'updateRole']);
             Route::delete('/team/{member}', [TeamController::class, 'remove']);
 
