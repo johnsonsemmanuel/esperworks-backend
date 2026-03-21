@@ -10,6 +10,8 @@ use App\Models\InvoiceItem;
 use App\Models\Contract;
 use App\Models\Expense;
 use App\Models\Payment;
+use App\Models\Bill;
+use App\Models\CreditNote;
 use App\Models\Subscription;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
@@ -319,6 +321,77 @@ class DatabaseSeeder extends Seeder
                     'payment_method' => $ed[3],
                     'vendor' => $ed[4],
                     'status' => 'approved',
+                ]
+            );
+        }
+
+        // ── Bills (Accounts Payable) ──
+        $billsData = [
+            // [supplier, bill_number, category, amount, status, bill_days_ago, due_days_ago]
+            ['Vodafone Ghana', 'BILL-001', 'Utilities',             450,   'paid',     35, 5],
+            ['Landlord - Oxford St', 'BILL-002', 'Rent',           3500,   'paid',     32, 2],
+            ['AWS',                  'BILL-003', 'Software',        850,   'paid',     10, 0],
+            ['Compughana Ltd',       'BILL-004', 'Equipment',      2200,   'unpaid',    7, 14],
+            ['Fuel Zone Ghana',      'BILL-005', 'Transport',       350,   'unpaid',    3, 17],
+            ['Star Assurance',       'BILL-006', 'Insurance',      1200,   'unpaid',   20, -5],  // overdue
+            ['Google Workspace',     'BILL-007', 'Software',        120,   'unpaid',    5, 25],
+            ['Lex Associates',       'BILL-008', 'Professional Services', 2000, 'unpaid', 14, -2], // overdue
+        ];
+
+        foreach ($billsData as $bd) {
+            $billDate = now()->subDays($bd[6]);
+            $dueDate  = $bd[7] >= 0 ? now()->addDays($bd[7]) : now()->subDays(abs($bd[7]));
+            $isPaid   = $bd[4] === 'paid';
+            Bill::firstOrCreate(
+                ['business_id' => $business->id, 'bill_number' => $bd[1]],
+                [
+                    'supplier_name'    => $bd[0],
+                    'category'         => $bd[2],
+                    'amount'           => $bd[3],
+                    'amount_paid'      => $isPaid ? $bd[3] : 0,
+                    'status'           => $isPaid ? 'paid' : ($dueDate->isPast() ? 'overdue' : 'unpaid'),
+                    'bill_date'        => $billDate,
+                    'due_date'         => $dueDate,
+                    'currency'         => 'GHS',
+                    'payment_method'   => $isPaid ? 'bank' : null,
+                    'payment_reference'=> $isPaid ? 'PAY-' . Str::upper(Str::random(6)) : null,
+                    'paid_date'        => $isPaid ? $billDate->copy()->addDays(3) : null,
+                    'description'      => "{$bd[2]} bill from {$bd[0]}",
+                ]
+            );
+        }
+
+        // ── Credit Notes ──
+        // Need at least some paid invoices to link to
+        $paidInvoices = $business->invoices()->where('status', 'paid')->get();
+
+        $creditNotesData = [
+            // [client_idx, credit_note_number, reason, total, status, linked_invoice_idx]
+            [0, 'CN-001', 'Service was partially delivered — prorated refund for 2 weeks',      1200, 'applied',  0],
+            [1, 'CN-002', 'Duplicate charge — client was billed twice for October',              800,  'issued',   1],
+            [2, 'CN-003', 'Client cancelled project mid-way, refund for undelivered milestone', 2500,  'issued',   2],
+            [0, 'CN-004', 'Data entry error on original invoice — amount corrected',             500,  'void',     3],
+        ];
+
+        foreach ($creditNotesData as $idx => $cn) {
+            $linkedInvoice = $paidInvoices->get($cn[5] % $paidInvoices->count());
+            $total    = $cn[3];
+            $vat      = round($total * 0.125, 2);
+            $subtotal = $total - $vat;
+            CreditNote::firstOrCreate(
+                ['business_id' => $business->id, 'credit_note_number' => $cn[1]],
+                [
+                    'client_id'        => $clients[$cn[0]]->id,
+                    'invoice_id'       => $linkedInvoice?->id,
+                    'status'           => $cn[4],
+                    'issue_date'       => now()->subDays(rand(5, 30)),
+                    'currency'         => 'GHS',
+                    'subtotal'         => $subtotal,
+                    'vat_amount'       => $vat,
+                    'total'            => $total,
+                    'amount_applied'   => $cn[4] === 'applied' ? $total : 0,
+                    'reason'           => $cn[2],
+                    'items'            => [['description' => $cn[2], 'amount' => $total]],
                 ]
             );
         }
