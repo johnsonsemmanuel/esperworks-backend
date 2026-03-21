@@ -6,23 +6,22 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->string('admin_role')->nullable()->after('role')->comment('viewer, operator, manager, super_admin');
+            if (!Schema::hasColumn('users', 'admin_role')) {
+                $table->string('admin_role')->nullable()->after('role')
+                    ->comment('viewer, operator, manager, super_admin');
+            }
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn('admin_role');
+            if (Schema::hasColumn('users', 'admin_role')) {
+                $table->dropColumn('admin_role');
+            }
         });
     }
 };

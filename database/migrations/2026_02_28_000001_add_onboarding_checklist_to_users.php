@@ -6,23 +6,22 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->json('onboarding_checklist')->nullable()->after('preferences');
+            if (!Schema::hasColumn('users', 'onboarding_checklist')) {
+                // 'preferences' column does not exist; drop the ->after() reference
+                $table->json('onboarding_checklist')->nullable();
+            }
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn('onboarding_checklist');
+            if (Schema::hasColumn('users', 'onboarding_checklist')) {
+                $table->dropColumn('onboarding_checklist');
+            }
         });
     }
 };

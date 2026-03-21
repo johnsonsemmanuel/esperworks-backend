@@ -9,22 +9,31 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('payments', function (Blueprint $table) {
-            $table->string('gateway')->default('paystack')->after('paystack_access_code');
-            $table->string('gateway_transaction_id')->nullable()->after('gateway');
+            if (!Schema::hasColumn('payments', 'gateway')) {
+                $table->string('gateway')->default('paystack')->after('paystack_access_code');
+            }
+            if (!Schema::hasColumn('payments', 'gateway_transaction_id')) {
+                $table->string('gateway_transaction_id')->nullable()->after('gateway');
+            }
         });
 
         Schema::table('businesses', function (Blueprint $table) {
-            $table->string('payment_gateway')->default('paystack')->after('paystack_subaccount_code');
+            if (!Schema::hasColumn('businesses', 'payment_gateway')) {
+                $table->string('payment_gateway')->default('paystack')->after('paystack_subaccount_code');
+            }
         });
     }
 
     public function down(): void
     {
         Schema::table('payments', function (Blueprint $table) {
-            $table->dropColumn(['gateway', 'gateway_transaction_id']);
+            $cols = array_filter(['gateway', 'gateway_transaction_id'], fn($c) => Schema::hasColumn('payments', $c));
+            if ($cols) $table->dropColumn(array_values($cols));
         });
         Schema::table('businesses', function (Blueprint $table) {
-            $table->dropColumn('payment_gateway');
+            if (Schema::hasColumn('businesses', 'payment_gateway')) {
+                $table->dropColumn('payment_gateway');
+            }
         });
     }
 };
