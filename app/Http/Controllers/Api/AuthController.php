@@ -47,6 +47,7 @@ class AuthController extends Controller
             'referral_code' => 'nullable|string|max:20',
             'promo_code' => 'nullable|string|max:30',
             'start_trial' => 'nullable|boolean',
+            'account_type' => 'nullable|string|in:freelancer,creator,coworking,business',
         ]);
 
         $verificationCode = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
@@ -102,6 +103,7 @@ class AuthController extends Controller
             'tin' => $request->business_tin,
             'registration_number' => $request->business_registration_number,
             'industry' => $request->business_industry,
+            'account_type' => $request->account_type,
             'is_registered' => $request->is_registered ?? false,
             'status' => 'active',
             'plan' => 'free',

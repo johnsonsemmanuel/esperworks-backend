@@ -27,6 +27,7 @@ class Business extends Model
         'logo',
         'website',
         'industry',
+        'account_type',
         'description',
         'is_registered',
         'status',
