@@ -13,11 +13,13 @@ class PaymentReceived implements ShouldBroadcast
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public function __construct(
-        public int    $paymentId,
-        public ?int   $clientId,
-        public int    $businessId,
-        public float  $amount,
-        public string $reference,
+        public int     $paymentId,
+        public ?int    $clientId,
+        public int     $businessId,
+        public float   $amount,
+        public string  $reference,
+        public ?string $currency = null,
+        public ?string $method   = null,
     ) {}
 
     public function broadcastOn(): array
@@ -37,6 +39,7 @@ class PaymentReceived implements ShouldBroadcast
         return [
             'payment_id' => $this->paymentId,
             'amount'     => $this->amount,
+            'currency'   => $this->currency ?? 'GHS',
             'reference'  => $this->reference,
         ];
     }

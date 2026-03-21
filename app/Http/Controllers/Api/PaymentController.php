@@ -331,7 +331,9 @@ class PaymentController extends Controller
                     $payment->client_id,
                     $payment->business_id,
                     floatval($payment->amount),
-                    $payment->reference
+                    $payment->reference,
+                    $payment->currency ?? 'GHS',
+                    $payment->method
                 );
             } catch (\Exception $e) {
                 \Log::warning('Failed to dispatch PaymentReceived event on retry: ' . $e->getMessage());
