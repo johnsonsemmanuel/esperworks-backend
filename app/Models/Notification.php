@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Events\NotificationCreated;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -22,6 +23,14 @@ class Notification extends Model
         static::creating(function (Notification $notification) {
             if (empty($notification->id)) {
                 $notification->id = (string) \Illuminate\Support\Str::uuid();
+            }
+        });
+
+        static::created(function (Notification $notification) {
+            try {
+                NotificationCreated::dispatch($notification);
+            } catch (\Throwable) {
+                // Never let a broadcast failure break notification creation
             }
         });
     }

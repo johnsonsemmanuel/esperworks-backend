@@ -49,4 +49,10 @@ return [
         'base_url'    => env('FLUTTERWAVE_BASE_URL', 'https://api.flutterwave.com/v3'),
     ],
 
+    'africastalking' => [
+        'username'  => env('AT_USERNAME'),
+        'api_key'   => env('AT_API_KEY'),
+        'sender_id' => env('AT_SENDER_ID', 'EsperWorks'),
+    ],
+
 ];

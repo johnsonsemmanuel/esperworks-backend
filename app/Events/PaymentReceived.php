@@ -2,31 +2,42 @@
 
 namespace App\Events;
 
-use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Broadcasting\Presence\PresenceChannel;
+use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
+use Illuminate\Queue\SerializesModels;
 
-class PaymentReceived extends Dispatchable implements ShouldBroadcast
+class PaymentReceived implements ShouldBroadcast
 {
+    use Dispatchable, InteractsWithSockets, SerializesModels;
+
     public function __construct(
-        public int $paymentId,
-        public int $clientId,
-        public int $businessId,
-        public float $amount,
-        public string $reference
+        public int    $paymentId,
+        public ?int   $clientId,
+        public int    $businessId,
+        public float  $amount,
+        public string $reference,
     ) {}
 
     public function broadcastOn(): array
     {
         return [
-            new PrivateChannel('client.' . $this->clientId),
+            new PrivateChannel("business.{$this->businessId}"),
         ];
     }
 
     public function broadcastAs(): string
     {
-        return 'client-notifications';
+        return 'payment.received';
+    }
+
+    public function broadcastWith(): array
+    {
+        return [
+            'payment_id' => $this->paymentId,
+            'amount'     => $this->amount,
+            'reference'  => $this->reference,
+        ];
     }
 }

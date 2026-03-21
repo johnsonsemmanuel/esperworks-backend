@@ -10,6 +10,7 @@ use App\Models\ActivityLog;
 use App\Mail\InvoiceMail;
 use App\Services\InvoiceService;
 use App\Services\PdfService;
+use App\Services\SmsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
@@ -299,6 +300,18 @@ class InvoiceController extends Controller
             \Log::warning('Failed to dispatch InvoiceSent event: ' . $e->getMessage());
         }
 
+        // SMS notification to client (plan-gated: free=3, growth=20, pro=100/mo)
+        if (!empty($invoiceObj->client->phone)) {
+            $viewUrl     = config('app.frontend_url') . '/invoices/' . $invoiceObj->signing_token;
+            $currency    = $invoiceObj->currency ?? 'GHS';
+            $symbol      = match ($currency) { 'GHS' => 'GH₵', 'USD' => '$', 'EUR' => '€', 'GBP' => '£', default => $currency . ' ' };
+            $smsMessage  = "{$businessObj->name}: Invoice #{$invoiceObj->invoice_number} for {$symbol}"
+                . number_format(floatval($invoiceObj->total), 2)
+                . " is ready. View: {$viewUrl}";
+
+            SmsService::send($businessObj, $invoiceObj->client->phone, $smsMessage);
+        }
+
         // Consistent status determination logic
         $isFullyPaid = floatval($invoiceObj->amount_paid) >= floatval($invoiceObj->total);
         $hasPayments = $invoiceObj->payments()->exists();
@@ -401,6 +414,20 @@ class InvoiceController extends Controller
         } catch (\Exception $e) {
             \Log::warning('Failed to send reminder email: ' . $e->getMessage());
         }
+
+        // SMS overdue reminder to client
+        if (!empty($invoiceObj->client->phone)) {
+            $viewUrl    = config('app.frontend_url') . '/invoices/' . $invoiceObj->signing_token;
+            $currency   = $invoiceObj->currency ?? 'GHS';
+            $symbol     = match ($currency) { 'GHS' => 'GH₵', 'USD' => '$', 'EUR' => '€', 'GBP' => '£', default => $currency . ' ' };
+            $dueStr     = $invoiceObj->due_date ? $invoiceObj->due_date->format('M d') : 'ASAP';
+            $smsMessage = "REMINDER from {$businessObj->name}: Invoice #{$invoiceObj->invoice_number} ({$symbol}"
+                . number_format(floatval($invoiceObj->total), 2)
+                . ") is due {$dueStr}. Pay: {$viewUrl}";
+
+            SmsService::send($businessObj, $invoiceObj->client->phone, $smsMessage);
+        }
+
         ActivityLog::log('invoice.reminder', "Reminder sent for {$invoiceObj->invoice_number}", $invoiceObj);
 
         return response()->json(['message' => 'Reminder sent']);

@@ -351,6 +351,7 @@ class Business extends Model
                 'accounting_dashboard' => 0,
                 'ghana_tax'            => -1,  // always available
                 'whatsapp_share'       => -1,  // always available
+                'sms'                  => 3,   // 3 SMS/month
             ],
             'growth' => [
                 'invoices'             => 100,
@@ -373,6 +374,7 @@ class Business extends Model
                 'accounting_dashboard' => -1,
                 'ghana_tax'            => -1,
                 'whatsapp_share'       => -1,
+                'sms'                  => 20,  // 20 SMS/month
             ],
             'pro' => [
                 'invoices'             => -1,
@@ -395,6 +397,7 @@ class Business extends Model
                 'accounting_dashboard' => -1,
                 'ghana_tax'            => -1,
                 'whatsapp_share'       => -1,
+                'sms'                  => 100, // 100 SMS/month
             ],
         ];
     }
