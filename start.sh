@@ -32,6 +32,8 @@ sleep 5
   echo "--- Running migrations..."
   if php artisan migrate --force; then
     echo "=== Migrations complete ==="
+    echo "--- Seeding database (idempotent - safe to run on every deploy)..."
+    php artisan db:seed --force && echo "=== Seeding complete ===" || echo "WARNING: Seeding failed (non-fatal)"
   else
     echo "=== WARNING: Migrations failed. DB_HOST=${DB_HOST:-not set} ==="
   fi
