@@ -133,6 +133,7 @@ class BusinessController extends Controller
             'currency' => 'nullable|string|in:GHS,USD',
             'payment_terms' => 'nullable|string|max:30',
             'vat_rate' => 'nullable|string|max:10',
+            'account_type' => 'nullable|string|in:freelancer,creator,coworking,business',
         ]);
 
         $business->update($request->only([
@@ -145,6 +146,7 @@ class BusinessController extends Controller
             'tin',
             'registration_number',
             'industry',
+            'account_type',
             'description',
             'website',
             'invoice_prefix',
