@@ -8,6 +8,7 @@ use App\Models\Invoice;
 use App\Models\Payment;
 use App\Services\IdempotencyService;
 use App\Services\ManualPaymentService;
+use App\Services\PaymentGatewayFactory;
 use App\Contracts\PaymentGateway;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -109,7 +110,7 @@ class PaymentController extends Controller
         ]);
 
         // Paystack: card + mobile money (MTN, Vodafone, AirtelTigo) for GHS; subaccount split
-        $gateway = app(PaymentGateway::class);
+        $gateway = PaymentGatewayFactory::for($business);
         $result = $gateway->initializeTransaction([
             'email' => $invoice->client->email,
             'amount' => $requestedAmount,
@@ -129,6 +130,7 @@ class PaymentController extends Controller
             $payment->update([
                 'paystack_reference' => $reference,
                 'paystack_access_code' => $result['data']['access_code'] ?? null,
+                'gateway' => $business->payment_gateway ?? 'paystack',
             ]);
 
             return response()->json([
@@ -153,10 +155,12 @@ class PaymentController extends Controller
             auth()->id(),
             'payment_verify',
             function () use ($request) {
-                $gateway = app(PaymentGateway::class);
+                $payment = Payment::where('paystack_reference', $request->reference)
+                    ->orWhere('reference', $request->reference)
+                    ->firstOrFail();
+                $business = $payment->invoice->business ?? Business::find($payment->business_id);
+                $gateway = PaymentGatewayFactory::for($business);
                 $result = $gateway->verifyTransaction($request->reference);
-
-                $payment = Payment::where('paystack_reference', $request->reference)->firstOrFail();
 
                 // Idempotency: if already verified successfully, return existing result
                 if ($payment->status === 'success') {
@@ -290,7 +294,8 @@ class PaymentController extends Controller
             return response()->json(['message' => 'No reference available to verify this payment'], 422);
         }
 
-        $gateway = app(PaymentGateway::class);
+        $business = $payment->invoice->business ?? Business::find($payment->business_id);
+        $gateway = PaymentGatewayFactory::for($business);
         $result = $gateway->verifyTransaction($reference);
 
         if (($result['data']['status'] ?? '') === 'success') {
@@ -694,7 +699,7 @@ class PaymentController extends Controller
             'status' => 'pending',
         ]);
 
-        $paystack = app(PaystackService::class);
+        $gateway = PaymentGatewayFactory::for($business);
         $payload = [
             'email' => $invoice->client->email,
             'amount' => $amount,
@@ -711,7 +716,7 @@ class PaymentController extends Controller
 
         \Log::info('Paystack Init', ['reference' => $reference, 'payment_id' => $payment->id]);
 
-        $result = $paystack->initializeTransaction($payload);
+        $result = $gateway->initializeTransaction($payload);
 
         $status = $result['status'] ?? false;
 
@@ -742,6 +747,52 @@ class PaymentController extends Controller
             'error' => $paystackMessage,
             'code' => 'payment.gateway.initialization_failed',
         ], 422);
+    }
+
+    public function webhookFlutterwave(Request $request)
+    {
+        $signature = $request->header('verif-hash', '');
+        $flutterwave = app(\App\Services\FlutterwaveService::class);
+
+        if (!$flutterwave->verifyWebhook($signature, $request->getContent())) {
+            return response()->json(['message' => 'Invalid signature'], 401);
+        }
+
+        $event = $request->input('event');
+        $data  = $request->input('data', []);
+
+        if ($event === 'charge.completed' && ($data['status'] ?? '') === 'successful') {
+            $txRef = $data['tx_ref'] ?? null;
+            if ($txRef) {
+                $payment = Payment::where('reference', $txRef)
+                    ->orWhere('paystack_reference', $txRef)
+                    ->first();
+                if ($payment && $payment->status !== 'success') {
+                    $payment->update([
+                        'status'                => 'success',
+                        'gateway_transaction_id' => $data['id'] ?? null,
+                        'paid_at'               => now(),
+                        'amount'                => $data['amount'] ?? $payment->amount,
+                    ]);
+                    if ($payment->invoice) {
+                        $payment->invoice->increment('amount_paid', $payment->amount);
+                        if ($payment->invoice->fresh()->amount_paid >= $payment->invoice->total) {
+                            $payment->invoice->update(['status' => 'paid']);
+                        }
+                    }
+                }
+            }
+        }
+
+        return response()->json(['status' => 'ok']);
+    }
+
+    public function setGateway(Request $request, Business $business)
+    {
+        $this->authorize('update', $business);
+        $request->validate(['gateway' => 'required|in:paystack,flutterwave']);
+        $business->update(['payment_gateway' => $request->gateway]);
+        return response()->json(['message' => 'Gateway updated', 'gateway' => $request->gateway]);
     }
 
     private function dispatchReceipt(Invoice $invoice)

@@ -13,6 +13,7 @@ class Payment extends Model
     protected $fillable = [
         'business_id', 'invoice_id', 'client_id', 'amount', 'currency',
         'method', 'reference', 'paystack_reference', 'paystack_access_code',
+        'gateway', 'gateway_transaction_id',
         'status', 'metadata', 'paid_at',
     ];
 

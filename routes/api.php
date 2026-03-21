@@ -64,6 +64,9 @@ Route::get('/blog/{slug}', function (string $slug) {
 Route::get('/config/paystack', function () {
     return response()->json(['public_key' => config('services.paystack.public_key', '')]);
 });
+Route::get('/config/flutterwave', function () {
+    return response()->json(['public_key' => config('services.flutterwave.public_key', '')]);
+});
 
 // Simple ping — always returns 200, used by Railway healthcheck
 Route::get('/ping', function () {
@@ -99,6 +102,8 @@ Route::middleware('throttle:10,1')->post('/resolve-account', [PaymentSetupContro
 
 // Paystack webhook (no token validation - uses signature verification)
 Route::post('/payments/webhook', [PaymentController::class, 'webhook']);
+// Flutterwave webhook
+Route::post('/payments/webhook/flutterwave', [PaymentController::class, 'webhookFlutterwave']);
 
 // Public signing activity tracking (from client signing page, rate-limited)
 Route::middleware('throttle:30,1')->post('/contracts/{token}/signing-activity',
@@ -323,6 +328,7 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
             Route::post('/payments/manual', [PaymentController::class, 'recordManual']);
             Route::get('/payments/{payment}/receipt', [PaymentController::class, 'receipt']);
             Route::get('/payments/gateway-status', [PaymentController::class, 'gatewayStatus']);
+            Route::post('/payments/gateway', [PaymentController::class, 'setGateway']);
             Route::post('/payments/{payment}/retry-verify', [PaymentController::class, 'retryVerify']);
 
             // Payment Setup

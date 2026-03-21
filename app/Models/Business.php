@@ -43,6 +43,7 @@ class Business extends Model
         'payment_terms',
         'vat_rate',
         'paystack_subaccount_code',
+        'payment_gateway',
         'settlement_bank',
         'bank_account_number',
         'bank_account_name',

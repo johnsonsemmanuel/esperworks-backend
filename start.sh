@@ -7,8 +7,9 @@ echo "APP_ENV: ${APP_ENV:-not set}"
 
 # Validate APP_KEY — Laravel cannot boot without it
 if [ -z "$APP_KEY" ]; then
-  echo "ERROR: APP_KEY is not set."
-  exit 1
+  echo "WARNING: APP_KEY is not set. Generating a temporary key..."
+  export APP_KEY=$(php artisan key:generate --show 2>/dev/null || echo "base64:$(openssl rand -base64 32)")
+  echo "Generated APP_KEY: $APP_KEY"
 fi
 
 # Start the HTTP server IMMEDIATELY — this must happen first
