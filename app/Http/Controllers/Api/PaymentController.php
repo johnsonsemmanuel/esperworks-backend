@@ -9,6 +9,7 @@ use App\Models\Payment;
 use App\Services\IdempotencyService;
 use App\Services\ManualPaymentService;
 use App\Services\PaymentGatewayFactory;
+use App\Services\SmsService;
 use App\Contracts\PaymentGateway;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -799,10 +800,22 @@ class PaymentController extends Controller
     {
         try {
             Mail::to($invoice->client->email)->send(new InvoiceMail($invoice, 'receipt'));
-            return 'sent';
+            $status = 'sent';
         } catch (\Exception $e) {
             \Log::warning('Failed to send payment receipt email: ' . $e->getMessage());
-            return 'failed';
+            $status = 'failed';
         }
+
+        // SMS confirmation to client on payment received
+        if (!empty($invoice->client?->phone) && $invoice->business) {
+            $currency = $invoice->currency ?? 'GHS';
+            $symbol   = match ($currency) { 'GHS' => 'GH₵', 'USD' => '$', 'EUR' => '€', 'GBP' => '£', default => $currency . ' ' };
+            $message  = "Payment confirmed! {$invoice->business->name} received {$symbol}"
+                . number_format(floatval($invoice->total), 2)
+                . " for Invoice #{$invoice->invoice_number}. Thank you.";
+            SmsService::send($invoice->business, $invoice->client->phone, $message);
+        }
+
+        return $status;
     }
 }
