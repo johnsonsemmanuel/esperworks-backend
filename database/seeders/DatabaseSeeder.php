@@ -339,8 +339,8 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($billsData as $bd) {
-            $billDate = now()->subDays($bd[6]);
-            $dueDate  = $bd[7] >= 0 ? now()->addDays($bd[7]) : now()->subDays(abs($bd[7]));
+            $billDate = now()->subDays($bd[5]);
+            $dueDate  = $bd[6] >= 0 ? now()->addDays($bd[6]) : now()->subDays(abs($bd[6]));
             $isPaid   = $bd[4] === 'paid';
             Bill::firstOrCreate(
                 ['business_id' => $business->id, 'bill_number' => $bd[1]],

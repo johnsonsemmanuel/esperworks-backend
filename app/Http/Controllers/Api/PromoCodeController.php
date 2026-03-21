@@ -159,6 +159,40 @@ class PromoCodeController extends Controller
     }
 
     /**
+     * Authenticated: List active, publicly available promo codes.
+     * Returns only non-sensitive promo info so users know what's available.
+     */
+    public function available(Request $request)
+    {
+        $promos = PromoCode::where('is_active', true)
+            ->where(function ($q) {
+                $q->whereNull('starts_at')->orWhere('starts_at', '<=', now());
+            })
+            ->where(function ($q) {
+                $q->whereNull('expires_at')->orWhere('expires_at', '>', now());
+            })
+            ->where(function ($q) {
+                $q->where('max_uses', 0)->orWhereColumn('times_used', '<', 'max_uses');
+            })
+            ->get(['id', 'code', 'name', 'description', 'type', 'discount_percent', 'plan', 'trial_days', 'expires_at', 'max_uses', 'times_used']);
+
+        $mapped = $promos->map(function ($p) {
+            return [
+                'id'             => $p->id,
+                'code'           => $p->code,
+                'description'    => $p->description ?? $p->name,
+                'discount_type'  => $p->type === 'discount' ? 'percentage' : $p->type,
+                'discount_value' => $p->discount_percent ?? 0,
+                'expires_at'     => $p->expires_at?->toIso8601String(),
+                'max_uses'       => $p->max_uses ?: null,
+                'used_count'     => $p->times_used,
+            ];
+        });
+
+        return response()->json(['promo_codes' => $mapped]);
+    }
+
+    /**
      * Public: Validate a promo code (check if it's valid without redeeming).
      */
     public function validate_code(Request $request)

@@ -164,7 +164,8 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('/referrals', [ReferralController::class, 'index']);
     Route::post('/referrals/regenerate', [ReferralController::class, 'regenerateCode']);
 
-    // Promo code redemption (authenticated users)
+    // Promo codes (authenticated users)
+    Route::get('/promo-codes/available', [PromoCodeController::class, 'available']);
     Route::post('/promo-codes/redeem', [PromoCodeController::class, 'redeem']);
 
     // Support
