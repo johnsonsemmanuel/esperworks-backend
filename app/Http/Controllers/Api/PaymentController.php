@@ -241,9 +241,9 @@ class PaymentController extends Controller
                             $payment->client_id,
                             $payment->business_id,
                             floatval($payment->amount),
+                            $payment->reference,
                             $payment->currency,
-                            $payment->method,
-                            $payment->reference
+                            $payment->method
                         );
                     } catch (\Exception $e) {
                         \Log::warning('Failed to dispatch PaymentReceived event on verification: ' . $e->getMessage());
@@ -488,9 +488,9 @@ class PaymentController extends Controller
                         $payment->client_id,
                         $payment->business_id,
                         floatval($payment->amount),
+                        $payment->reference,
                         $payment->currency ?? 'GHS',
-                        $payment->method ?? 'paystack',
-                        $payment->reference
+                        $payment->method ?? 'paystack'
                     );
                 } catch (\Exception $e) {
                     \Log::warning('Failed to dispatch PaymentReceived event in webhook: ' . $e->getMessage());
@@ -771,11 +771,22 @@ class PaymentController extends Controller
                     ->orWhere('paystack_reference', $txRef)
                     ->first();
                 if ($payment && $payment->status !== 'success') {
+                    // Amount verification: ensure webhook amount matches expected payment amount
+                    if (isset($data['amount']) && abs((float)$data['amount'] - (float)$payment->amount) > 0.01) {
+                        Log::warning('Flutterwave webhook: Amount mismatch, not marking as paid', [
+                            'payment_id' => $payment->id,
+                            'expected_amount' => $payment->amount,
+                            'webhook_amount' => $data['amount'],
+                            'reference' => $txRef,
+                        ]);
+                        // Return 200 to prevent Flutterwave retries, but do NOT mark payment as paid
+                        return response()->json(['status' => 'ok']);
+                    }
+
                     $payment->update([
                         'status'                => 'success',
                         'gateway_transaction_id' => $data['id'] ?? null,
                         'paid_at'               => now(),
-                        'amount'                => $data['amount'] ?? $payment->amount,
                     ]);
                     if ($payment->invoice) {
                         $payment->invoice->increment('amount_paid', $payment->amount);

@@ -443,4 +443,3 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
         Route::delete('/posts/{id}', [AdminController::class, 'deletePost']);
     });
 });
-require base_path('routes/test_log.php');

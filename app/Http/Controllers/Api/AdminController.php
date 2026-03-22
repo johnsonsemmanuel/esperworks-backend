@@ -12,6 +12,7 @@ use App\Models\ActivityLog;
 use App\Models\LoginDevice;
 use App\Services\ActivityService;
 use App\Services\AdminNotificationService;
+use App\Services\SecurityLogger;
 use App\Models\Setting;
 use Illuminate\Http\Request;
 
@@ -57,17 +58,37 @@ class AdminController extends Controller
         $planDistribution = Business::selectRaw('plan, COUNT(*) as count')
             ->groupBy('plan')->get()->pluck('count', 'plan');
 
+        $start = now()->subMonths(11)->startOfMonth();
+        $end = now()->endOfMonth();
+
+        $revenueByMonth = Payment::where('status', 'success')
+            ->whereBetween('paid_at', [$start, $end])
+            ->selectRaw('YEAR(paid_at) as year, MONTH(paid_at) as month, SUM(amount) as total')
+            ->groupBy('year', 'month')
+            ->get()
+            ->keyBy(fn ($row) => $row->year . '-' . $row->month);
+
+        $businessesByMonth = Business::whereBetween('created_at', [$start, $end])
+            ->selectRaw('YEAR(created_at) as year, MONTH(created_at) as month, COUNT(*) as total')
+            ->groupBy('year', 'month')
+            ->get()
+            ->keyBy(fn ($row) => $row->year . '-' . $row->month);
+
+        $usersByMonth = User::whereBetween('created_at', [$start, $end])
+            ->selectRaw('YEAR(created_at) as year, MONTH(created_at) as month, COUNT(*) as total')
+            ->groupBy('year', 'month')
+            ->get()
+            ->keyBy(fn ($row) => $row->year . '-' . $row->month);
+
         $revenueChart = [];
         for ($i = 11; $i >= 0; $i--) {
             $month = now()->subMonths($i);
+            $key = $month->year . '-' . $month->month;
             $revenueChart[] = [
                 'month' => $month->format('M Y'),
-                'revenue' => Payment::where('status', 'success')
-                    ->whereYear('paid_at', $month->year)->whereMonth('paid_at', $month->month)->sum('amount'),
-                'new_businesses' => Business::whereYear('created_at', $month->year)
-                    ->whereMonth('created_at', $month->month)->count(),
-                'new_users' => User::whereYear('created_at', $month->year)
-                    ->whereMonth('created_at', $month->month)->count(),
+                'revenue' => (float) ($revenueByMonth[$key]->total ?? 0),
+                'new_businesses' => (int) ($businessesByMonth[$key]->total ?? 0),
+                'new_users' => (int) ($usersByMonth[$key]->total ?? 0),
             ];
         }
 

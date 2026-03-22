@@ -40,7 +40,15 @@ class RecurringInvoiceController extends Controller
     public function store(Request $request, Business $business)
     {
         $request->validate([
-            'client_id' => 'required|exists:clients,id',
+            'client_id' => [
+                'required',
+                'exists:clients,id',
+                function ($attribute, $value, $fail) use ($business) {
+                    if (!$business->clients()->where('id', $value)->exists()) {
+                        $fail('The selected client does not belong to this business.');
+                    }
+                }
+            ],
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'items' => 'required|array|min:1',
@@ -166,7 +174,12 @@ class RecurringInvoiceController extends Controller
             ]);
         }
 
-        $recurringInvoice->update($request->all());
+        $recurringInvoice->update($request->only([
+            'title', 'description', 'client_id', 'currency', 'frequency',
+            'interval_count', 'day_of_month', 'start_date', 'end_date',
+            'next_invoice_date', 'is_active', 'max_invoices', 'vat_rate',
+            'notes', 'items_data', 'subtotal', 'vat_amount', 'total',
+        ]));
 
         ActivityLog::log('recurring_invoice.updated', "Recurring invoice updated: {$recurringInvoice->title}", $recurringInvoice);
 

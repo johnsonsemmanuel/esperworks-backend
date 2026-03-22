@@ -12,7 +12,7 @@ class MarkOverdueInvoices extends Command
 
     public function handle(): int
     {
-        $count = Invoice::whereIn('status', ['sent', 'viewed', 'partially_paid'])
+        $count = Invoice::whereIn('status', ['sent', 'viewed', 'partial', 'partially_paid'])
             ->where('due_date', '<', now()->startOfDay())
             ->update(['status' => 'overdue']);
 

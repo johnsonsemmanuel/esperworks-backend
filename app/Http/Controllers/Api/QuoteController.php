@@ -28,13 +28,20 @@ class QuoteController extends Controller
 
         $quotes = $query->with('client:id,name,email')->latest()->paginate($request->per_page ?? 15);
 
+        $statusCounts = $business->contracts()
+            ->where('type', 'quote')
+            ->selectRaw('quote_status, count(*) as total')
+            ->groupBy('quote_status')
+            ->pluck('total', 'quote_status')
+            ->toArray();
+
         $counts = [
-            'all'      => $business->contracts()->where('type', 'quote')->count(),
-            'draft'    => $business->contracts()->where('type', 'quote')->where('quote_status', 'draft')->count(),
-            'sent'     => $business->contracts()->where('type', 'quote')->where('quote_status', 'sent')->count(),
-            'accepted' => $business->contracts()->where('type', 'quote')->where('quote_status', 'accepted')->count(),
-            'declined' => $business->contracts()->where('type', 'quote')->where('quote_status', 'declined')->count(),
-            'expired'  => $business->contracts()->where('type', 'quote')->where('quote_status', 'expired')->count(),
+            'all'      => array_sum($statusCounts),
+            'draft'    => $statusCounts['draft'] ?? 0,
+            'sent'     => $statusCounts['sent'] ?? 0,
+            'accepted' => $statusCounts['accepted'] ?? 0,
+            'declined' => $statusCounts['declined'] ?? 0,
+            'expired'  => $statusCounts['expired'] ?? 0,
         ];
 
         return response()->json(array_merge($quotes->toArray(), ['counts' => $counts]));

@@ -609,7 +609,7 @@ class InvoiceController extends Controller
         $newInvoice->client_signature_name = null;
         $newInvoice->client_signature_image = null;
         $newInvoice->client_signed_at = null;
-        $newInvoice->signing_token = Str::random(32);
+        $newInvoice->signing_token = Str::random(64);
         $newInvoice->pdf_path = null;
         $newInvoice->save();
 

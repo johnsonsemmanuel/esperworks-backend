@@ -113,7 +113,11 @@ class InvoiceTemplateController extends Controller
             $business->invoiceTemplates()->where('id', '!=', $template->id)->where('is_default', true)->update(['is_default' => false]);
         }
 
-        $template->update($request->all());
+        $template->update($request->only([
+            'name', 'description', 'is_default', 'layout_config', 'custom_fields',
+            'color_scheme', 'font_settings', 'header_settings', 'footer_settings',
+            'item_settings', 'total_settings', 'notes_settings', 'payment_settings',
+        ]));
 
         ActivityLog::log('invoice_template.updated', "Invoice template updated: {$template->name}", $template);
 

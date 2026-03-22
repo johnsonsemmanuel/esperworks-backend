@@ -100,13 +100,13 @@ class RecurringInvoice extends Model
         $currentDate = $this->next_invoice_date ?? $this->start_date;
 
         return match($this->frequency) {
-            'daily' => $currentDate->addDays($this->interval_count ?? 1),
-            'weekly' => $currentDate->addWeeks($this->interval_count ?? 1),
-            'biweekly' => $currentDate->addWeeks(2),
-            'monthly' => $currentDate->addMonths($this->interval_count ?? 1),
-            'quarterly' => $currentDate->addMonths(3 * ($this->interval_count ?? 1)),
-            'yearly' => $currentDate->addYears($this->interval_count ?? 1),
-            default => $currentDate->addMonth(),
+            'daily' => $currentDate->copy()->addDays($this->interval_count ?? 1),
+            'weekly' => $currentDate->copy()->addWeeks($this->interval_count ?? 1),
+            'biweekly' => $currentDate->copy()->addWeeks(2),
+            'monthly' => $currentDate->copy()->addMonths($this->interval_count ?? 1),
+            'quarterly' => $currentDate->copy()->addMonths(3 * ($this->interval_count ?? 1)),
+            'yearly' => $currentDate->copy()->addYears($this->interval_count ?? 1),
+            default => $currentDate->copy()->addMonth(),
         };
     }
 
